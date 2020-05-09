@@ -1,0 +1,13 @@
+.my-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 2px solid #bababa;
+  border-radius: 10px;
+  background: #bdb9faee;
+  margin: 3px;
+  padding: 3px;
+  width: 80px;
+  height: 40px;
+  font: 10px Arial;
+}
