@@ -1,6 +1,9 @@
 import React from 'react';
 import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
 import { Column, Table, SortDirection, SortIndicator} from 'react-virtualized';
+import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
+import Button from 'react-bootstrap/Button';
 import styles from './MyFeatureTable.module.css';
 import data from '../data.json';
 
@@ -12,7 +15,8 @@ export default class MyFeatureTable extends React.PureComponent {
 
     const sortBy = 'index';
     const sortDirection = SortDirection.ASC;
-    const sortedList = this._sortList({sortBy, sortDirection});
+    const filteredList = list;
+    const sortedList = this._sortList({filteredList, sortBy, sortDirection});
 
     this.state = {
       disableHeader: false,
@@ -20,12 +24,14 @@ export default class MyFeatureTable extends React.PureComponent {
       height: 270,
       hideIndexRow: false,
       overscanRowCount: 10,
-      rowHeight: 40,
+      rowHeight: 20,
       scrollToIndex: undefined,
       sortBy,
       sortDirection,
       sortedList,
+      filteredList,
       useDynamicRowHeight: false,
+      searchTerm: '',
     };
 
     this._getRowHeight = this._getRowHeight.bind(this);
@@ -33,6 +39,37 @@ export default class MyFeatureTable extends React.PureComponent {
     this._noRowsRenderer = this._noRowsRenderer.bind(this);
     this._rowClassName = this._rowClassName.bind(this);
     this._sort = this._sort.bind(this);
+  }
+
+  handleSubmit = (event) => {
+    event.preventDefault();
+    let filteredList = list.filter(item => this.containsSearchText(item));
+    let sortedList = this._sortList({
+      filteredList, 
+      sortBy: this.state.sortBy, 
+      sortDirection: this.state.sortDirection
+    });
+    this.setState({ filteredList, sortedList  });
+  };
+
+  containsSearchText = (item) => {
+    const searchText = this.state.searchText.toLowerCase();
+    let found = false;
+    Object.keys(item).forEach(function(key,index) {
+      if (found) {
+        return;
+      }
+      let val = item[key].toString().toLowerCase();
+      if (val.includes(searchText)) {
+        found = true;
+        return;
+      }
+    });
+    return found;
+  }
+
+  onSearchTextChanged = (event) => {
+    this.setState({ searchText: event.target.value });
   }
 
   render() {
@@ -72,6 +109,23 @@ export default class MyFeatureTable extends React.PureComponent {
     }
   
     return (
+      <>
+      <Form onSubmit={this.handleSubmit}>
+        <Form.Row>
+          <Form.Group controlId="searchText">
+            <InputGroup>
+              <InputGroup.Prepend>
+                <InputGroup.Text id="inputGroupPrepend">🔍</InputGroup.Text>
+              </InputGroup.Prepend>
+              <Form.Control type="text"
+                onChange={this.onSearchTextChanged} 
+                placeholder="Enter Search Term" 
+              />
+              <Button type="submit">Search</Button>
+            </InputGroup>
+          </Form.Group>
+        </Form.Row>
+      </Form>
       <AutoSizer>
         { (params) => {
           const {width, height} = params;
@@ -88,7 +142,7 @@ export default class MyFeatureTable extends React.PureComponent {
               rowHeight={useDynamicRowHeight ? this._getRowHeight : rowHeight}
               rowGetter={rowGetter}
               // rowGetter={({index}) => list[index]}
-              rowCount={list.length}
+              rowCount={this.state.sortedList.length}
               scrollToIndex={scrollToIndex}
               sort={this._sort}
               sortBy={sortBy}
@@ -125,15 +179,17 @@ export default class MyFeatureTable extends React.PureComponent {
           )}
         }
         </AutoSizer>
+        </>
       );
   }
 
   _getDatum(list, index) {
-    return list[index % list.length];
+    return this.state.sortedList[index % this.state.sortedList.length];
   }
 
   _getRowHeight({index}) {
-    return this._getDatum(list, index).length;
+    return 20;
+    //return this._getDatum(this.state.sortedList, index).length;
   }
 
   _headerRenderer(params) {
@@ -164,13 +220,13 @@ export default class MyFeatureTable extends React.PureComponent {
   }
 
   _sort({sortBy, sortDirection}) {
-    const sortedList = this._sortList({sortBy, sortDirection});
+    const sortedList = this._sortList({filteredList: this.state.filteredList, sortBy, sortDirection});
 
     this.setState({sortBy, sortDirection, sortedList});
   }
 
-  _sortList({sortBy, sortDirection}) {
-    let newList = list.sort((a, b) => {      
+  _sortList({filteredList, sortBy, sortDirection}) {
+    let newList = filteredList.sort((a, b) => {      
       let dir = sortDirection === SortDirection.ASC ? 1 : -1;
       if (a[sortBy] > b[sortBy]) {
         return 1 * dir;
