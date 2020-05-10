@@ -39,6 +39,12 @@
   color: #bdbdbd;
 }
 
+.divName {
+  line-height: 1.2;
+  margin: 0px;
+  padding: 0px;
+}
+
 .divCompany {
   color: green;
   font-size: 10px;

@@ -3,15 +3,15 @@ import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
 import { Column, Table, SortDirection, SortIndicator } from 'react-virtualized';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Styles from './MyFeatureTable.module.css';
-import data from '../data.json';
-
-let list = data[0];
+import Button from 'react-bootstrap/Button';
+import Styles from './MyDynamicColumnTable.module.css';
+import { getApiData } from '../api/pixabayApi';
 
 export default class MyFeatureTable extends React.PureComponent {
   constructor(props, context) {
     super(props, context);
 
+    const list = [];
     const sortBy = 'index';
     const sortDirection = SortDirection.ASC;
     const filteredList = list;
@@ -21,16 +21,19 @@ export default class MyFeatureTable extends React.PureComponent {
       disableHeader: false,
       headerHeight: 30,
       height: 270,
-      hideIndexRow: false,
       overscanRowCount: 10,
       rowHeight: 20,
       scrollToIndex: undefined,
       sortBy,
       sortDirection,
-      sortedList,
+      list,
       filteredList,
+      sortedList,
       useDynamicRowHeight: true,
-      searchTerm: '',
+      apiSearchText: '',
+      filterText: '',
+      columns: [],
+      apiErrorMessage: '',
     };
 
     this._getRowHeight = this._getRowHeight.bind(this);
@@ -44,73 +47,46 @@ export default class MyFeatureTable extends React.PureComponent {
     const {
       disableHeader,
       headerHeight,
-      hideIndexRow,
       overscanRowCount,
-      rowHeight,
       scrollToIndex,
       sortBy,
       sortDirection,
       sortedList,
-      useDynamicRowHeight,
     } = this.state;
 
     const rowGetter = ({index}) => {
       return this._getDatum(sortedList, index);
     }
   
-    const getIndexCellData = ({rowData}) => {
-      //console.log('getIndexCellData-params:', rowData);
-      return rowData.index;
-    }
-
-    const getNameCellRenderer = (params) => {
-      const { dataKey, isScrolling, rowData /*, rowIndex, cellData, columnData, columnIndex*/ } = params;
-      let value = rowData[dataKey];
-      let data = null;
-      if (isScrolling) {
-        data = ['...'];
-      } else if (value.length <= 15) {
-        data = [value];
-      } else {
-        data = value.split(' ');
-      }
-        
-      return (
-        <div className={Styles.divName}>
-          {
-            data.map((v,k) => (
-              <div key={k}>{v}</div>
-            ))
-          }
-        </div>
-      );
-    }
-    
-    const getCompanyCellRenderer = ({
-      cellData, columnData, columnIndex, dataKey, isScrolling, rowData, rowIndex
-    }) => {
-      const rowHeight = this._getRowHeight({ index: rowIndex});
-      const data = isScrolling ? '...' :
-        rowData[dataKey];
-      return (
-        <div className={Styles.divCompany} style={{ height: rowHeight-6}}>
-          {data}
-        </div>
-      );
-    }
-  
     return (
       <>
       <Form onSubmit={this.handleSubmit}>
         <Form.Row>
-          <Form.Group controlId="searchText">
+          <Form.Group controlId="searchText" className={Styles.searchInputArea}>
             <InputGroup>
               <InputGroup.Prepend style={{height: '25px'}}>
-                <InputGroup.Text id="inputGroupPrepend"><span role="img" aria-label="search">🔍</span></InputGroup.Text>
+                <InputGroup.Text><span role="img" aria-label="search">🌐</span></InputGroup.Text>
               </InputGroup.Prepend>
               <Form.Control type="text"
-                onChange={this.onSearchTextChanged} 
-                placeholder="Enter Search Term" 
+                onChange={this.onApiSearchTextChanged} 
+                placeholder="Enter Search" 
+                style={{height: '25px', fontSize: '15px', marginRight: '3px'}}
+              />
+              <Button onClick={this.onApiSearch}
+                style={{height: '25px', lineHeight: '0.5'}}
+              >
+                Search
+              </Button>
+              <span style={{color: 'red'}}>{this.state.apiErrorMessage}</span>
+            </InputGroup>
+            <div className="col-1"/>
+            <InputGroup>
+              <InputGroup.Prepend style={{height: '25px'}}>
+                <InputGroup.Text><span role="img" aria-label="search">🔍</span></InputGroup.Text>
+              </InputGroup.Prepend>
+              <Form.Control type="text"
+                onChange={this.onFilterChanged} 
+                placeholder="Enter Filter" 
                 style={{height: '25px', fontSize: '15px', marginRight: '3px'}}
               />
             </InputGroup>
@@ -130,7 +106,7 @@ export default class MyFeatureTable extends React.PureComponent {
               noRowsRenderer={this._noRowsRenderer}
               overscanRowCount={overscanRowCount}
               rowClassName={this._rowClassName}
-              rowHeight={useDynamicRowHeight ? this._getRowHeight : rowHeight}
+              rowHeight={20}
               rowGetter={rowGetter}
               rowCount={this.state.sortedList.length}
               scrollToIndex={scrollToIndex}
@@ -139,33 +115,19 @@ export default class MyFeatureTable extends React.PureComponent {
               sortDirection={sortDirection}
               width={width}
             >
-              {!hideIndexRow && (
-                <Column
-                  label="Index"
-                  dataKey="index"
-                  disableSort={!this._isSortEnabled()}
-                  headerRenderer={this._headerRenderer}
-                  cellDataGetter={getIndexCellData}
-                  width={80}
-                />
-              )}
-              <Column
-                label="Full Name"
-                dataKey="name"
-                disableSort={!this._isSortEnabled()}
-                headerRenderer={this._headerRenderer}
-                cellRenderer={getNameCellRenderer}
-                width={120}
-              />
-              <Column
-                width={210}
-                disableSort
-                label="This is my pretty company name"
-                dataKey="company"
-                className={Styles.exampleColumn}
-                cellRenderer={getCompanyCellRenderer}
-                flexGrow={1}
-              />
+              {
+                this.state.columns.map((col, k) => {
+                  if (k>10) {
+                    return null;
+                  }
+                  return (
+                  <Column key={k}
+                    label={col.label}
+                    dataKey={col.dataKey}
+                    width={col.width}
+                  />
+                )})
+              }
             </Table>
           )}
         }
@@ -242,19 +204,19 @@ export default class MyFeatureTable extends React.PureComponent {
     event.preventDefault();
   };
 
-  containsSearchText = (item, aSearchText) => {
-    if (aSearchText == null) {
+  containsFilterText = (item, aFilterText) => {
+    if (aFilterText == null) {
       return true;
     }
-    const searchText = aSearchText.toLowerCase();
+    const filterText = aFilterText.toLowerCase();
     let found = false;
     Object.keys(item).forEach(function(key,index) {
       if (found || key === '_id') {
         return;
       }
       let val = item[key].toString().toLowerCase();
-      if (val.includes(searchText)) {
-        console.log('val:', val, searchText, item);
+      if (val.includes(filterText)) {
+        console.log('val:', val, filterText, item);
         found = true;
         return;
       }
@@ -262,9 +224,55 @@ export default class MyFeatureTable extends React.PureComponent {
     return found;
   }
 
-  onSearchTextChanged = (event) => {
-    const searchText = event.target.value;
-    let filteredList = list.filter(item => this.containsSearchText(item, searchText));
+  onApiSearchTextChanged = (event) => {
+    const apiSearchText = event.target.value;
+    this.setState({ apiSearchText  });
+  }
+
+  onApiSearch = () => {
+    this.setState({ apiErrorMessage: '' });
+
+    const cbSuccess = (newList) => {
+      if (newList.length === 0) {        
+        this.setState({ apiErrorMessage: 'No hits!' });
+        return;
+      }
+      this.refreshColumns(newList[0]);
+      this.setState({ list: newList });
+      this.refreshLists(newList, this.state.filterText);  
+    }
+
+    const cbError = err => {
+      this.setState({ apiErrorMessage: err });
+      console.log(err);
+    }
+
+    getApiData(this.state.apiSearchText, cbSuccess, cbError);
+  }
+
+  refreshColumns = (firstListItem) => {
+    let columns = [];
+    Object.keys(firstListItem).forEach(function(key,index) {
+      if (key === '_id') {
+        return;
+      }
+      columns.push({
+        label: key.toUpperCase(),
+        dataKey: key,
+        width: 150,
+      });
+    });
+    this.setState({ columns });
+  }
+
+  onFilterChanged = (event) => {
+    const filterText = event.target.value;
+    this.setState({filterText});
+    this.refreshLists(this.state.list, filterText);
+  }
+
+  refreshLists = (list, filterText) => {
+    let filteredList = list.filter(item => this.containsFilterText(item, filterText));
     let sortedList = this._sortList({
       filteredList, 
       sortBy: this.state.sortBy, 
