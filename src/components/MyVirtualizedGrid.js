@@ -10,6 +10,7 @@ import './MyVirtualizedGrid.css';
 const list = data;
 
 class MyVirtualizedGrid extends React.Component {
+
   getItem = obj => {
     return (
       <div className="my-item">

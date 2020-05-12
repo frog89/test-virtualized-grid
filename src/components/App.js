@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import MyVirtualizedGrid from './MyVirtualizedGrid';
 import MyVirtualizedTable from './MyVirtualizedTable';
 import MyFeatureTable from './MyFeatureTable';
-import MyDynamicColumnTable from './MyDynamicColumnTable';
+import MyDynamicColumnGrid from './MyDynamicColumnGrid';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -14,7 +14,7 @@ class App extends Component {
     return (
       <div className="my-outer-container">
         <div className="my-inner-container">
-          <Tabs defaultActiveKey="dyn-table">
+          <Tabs defaultActiveKey="dyn-grid">
             <Tab eventKey="virt-table" title="Virtualized Table">
               <div className="my-tab-container">
                 <div className="my-tab-header">
@@ -35,13 +35,13 @@ class App extends Component {
                 </div>
               </div>
             </Tab>
-            <Tab eventKey="dyn-table" title="Virtualized Dynamic Table">
+            <Tab eventKey="dyn-grid" title="Virtualized Dynamic Grid">
               <div className="my-tab-container">
                 <div className="my-tab-header">
-                  Virtualized Dynamic Table
+                  Virtualized Dynamic Grid
                 </div>
                 <div className="my-tab-content">
-                  <MyDynamicColumnTable/>
+                  <MyDynamicColumnGrid/>
                 </div>
               </div>
             </Tab>
