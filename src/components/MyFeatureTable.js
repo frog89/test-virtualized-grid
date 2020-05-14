@@ -24,7 +24,7 @@ export default class MyFeatureTable extends React.PureComponent {
     const sortBy = 'index';
     const sortDirection = SortDirection.ASC;
     const filteredList = list;
-    const sortedList = this.sortList({filteredList, sortBy, sortDirection});
+    const sortedList = this.sortList({ list: filteredList, sortBy, sortDirection});
 
     this.state = {
       disableHeader: false,
@@ -39,14 +39,6 @@ export default class MyFeatureTable extends React.PureComponent {
       filteredList,
       searchTerm: '',
     };
-
-    this._headerRenderer = this.headerRenderer.bind(this);
-    this._noRowsRenderer = this.noRowsRenderer.bind(this);
-    this._rowClassName = this.rowClassName.bind(this);
-  }
-
-  rowGetter = ({index}) => {
-    return this.getItem(this.state.sortedList, index);
   }
 
   render() {
@@ -58,74 +50,9 @@ export default class MyFeatureTable extends React.PureComponent {
       scrollToIndex,
       sortBy,
       sortDirection,
-      filteredList,
       sortedList,
     } = this.state;
   
-    const getIndexCellData = ({rowData}) => {
-      //console.log('getIndexCellData-params:', rowData);
-      return rowData.index;
-    }
-
-    const getNameCellRenderer = (params) => {
-      const { parent, dataKey, isScrolling, rowData, columnIndex, 
-        rowIndex /*, cellData, columnData, */ } = params;
-      let value = rowData[dataKey];
-      let data = null;
-      if (value.length <= NAME_LEN_BORDER) {
-        data = [value];
-      } else {
-        data = value.split(' ');
-      }
-        
-      //console.log('getNameCellRenderer', rowIndex, columnIndex, dataKey, parent);
-      return (
-        <CellMeasurer
-            cache={this.myCache}
-            columnIndex={0}
-            key={dataKey}
-            parent={parent}
-            rowIndex={rowIndex}>
-          <div className={Styles.divName}>
-          {
-            data.map((v,k) => (
-              <div key={k}>{v}</div>
-            ))
-          }
-          </div>
-        </CellMeasurer>
-      );
-    }
-    
-    const getCompanyCellRenderer = (params) => {
-      const { parent, columnIndex, dataKey, isScrolling, 
-        rowData, rowIndex /* cellData, columnData */ } = params;
-      const rowHeight = this.myCache.rowHeight({index: rowIndex});
-      //console.log('getCompanyCellRenderer', rowHeight, rowData);
-      const data = isScrolling ? '...' : rowData[dataKey];
-
-      return (
-        <CellMeasurer
-          cache={this.myCache}
-          columnIndex={1}
-          key={dataKey}
-          parent={parent}
-          rowIndex={rowIndex}
-        >
-          <div className={Styles.divCompany} style={{ height: rowHeight - 6 }}>
-            {data}
-          </div>
-        </CellMeasurer>
-      );
-    }
-
-    const sort = ({sortBy, sortDirection}) => {
-      let sortedList = this.sortList({filteredList, sortBy, sortDirection});
-      //console.log('_getRowHeight', sortedList);
-  
-      this.setState({sortBy, sortDirection, sortedList});
-    }
-
     if (this.myLastRenderedWidth !== width) {
       this.myLastRenderedWidth = width;
       this.myCache.clearAll();
@@ -135,7 +62,7 @@ export default class MyFeatureTable extends React.PureComponent {
       <>
       <Form onSubmit={this.handleSubmit}>
         <Form.Row>
-          <Form.Group controlId="searchText">
+          <Form.Group controlId="searchText" style={{width: '100%', paddingLeft: '5px' , paddingRight: '5px'}}>
             <InputGroup>
               <InputGroup.Prepend style={{height: '25px'}}>
                 <InputGroup.Text id="inputGroupPrepend"><span role="img" aria-label="search">🔍</span></InputGroup.Text>
@@ -143,7 +70,7 @@ export default class MyFeatureTable extends React.PureComponent {
               <Form.Control type="text"
                 onChange={this.onFilterTextChanged} 
                 placeholder="Enter Search Term" 
-                style={{height: '25px', fontSize: '15px', marginRight: '3px'}}
+                style={{height: '25px', width: '100%', fontSize: '15px', marginRight: '3px'}}
               />
             </InputGroup>
           </Form.Group>
@@ -177,7 +104,7 @@ export default class MyFeatureTable extends React.PureComponent {
               rowGetter={this.rowGetter}
               rowCount={sortedList.length}
               scrollToIndex={scrollToIndex}
-              sort={sort}
+              sort={this.sort}
               sortBy={sortBy}
               sortDirection={sortDirection}
               width={width}
@@ -187,7 +114,7 @@ export default class MyFeatureTable extends React.PureComponent {
                 dataKey="index"
                 disableSort={!this.isSortEnabled()}
                 headerRenderer={this.headerRenderer}
-                cellDataGetter={getIndexCellData}
+                cellDataGetter={this.getIndexCellData}
                 width={80}
               />
               <Column
@@ -195,7 +122,7 @@ export default class MyFeatureTable extends React.PureComponent {
                 dataKey="name"
                 disableSort={!this.isSortEnabled()}
                 headerRenderer={this.headerRenderer}
-                cellRenderer={getNameCellRenderer}
+                cellRenderer={this.getNameCellRenderer}
                 width={120}
               />
               <Column
@@ -204,7 +131,7 @@ export default class MyFeatureTable extends React.PureComponent {
                 label="This is my pretty company name"
                 dataKey="company"
                 className={Styles.exampleColumn}
-                cellRenderer={getCompanyCellRenderer}
+                cellRenderer={this.getCompanyCellRenderer}
                 flexGrow={1}
               />
             </Table>
@@ -213,6 +140,85 @@ export default class MyFeatureTable extends React.PureComponent {
       </AutoSizer>
       </>
     );
+  }
+
+  sort = ({sortBy, sortDirection}) => {
+    let sortedList = this.sortList({ list: this.state.filteredList, sortBy, sortDirection});
+    //console.log('_getRowHeight', sortedList);
+
+    this.setState({sortBy, sortDirection, sortedList});
+  }
+
+  getNameCellRenderer = (params) => {
+    //const { parent, dataKey, isScrolling, rowData, columnIndex, rowIndex, cellData, columnData } = params;
+    const { parent, dataKey, rowData, rowIndex } = params;
+    let value = rowData[dataKey];
+    let data = null;
+    if (value.length <= NAME_LEN_BORDER) {
+      data = [value];
+    } else {
+      data = value.split(' ');
+    }
+      
+    //console.log('getNameCellRenderer', rowIndex, columnIndex, dataKey, parent);
+    return (
+      <CellMeasurer
+          cache={this.myCache}
+          columnIndex={0}
+          key={dataKey}
+          parent={parent}
+          rowIndex={rowIndex}>
+        <div className={Styles.divName}>
+        {
+          data.map((v,k) => (
+            <div key={k}>{v}</div>
+          ))
+        }
+        </div>
+      </CellMeasurer>
+    );
+  }
+  
+  getCompanyCellRenderer = (params) => {
+    //const { parent, dataKey, isScrolling, rowData, columnIndex, rowIndex, cellData, columnData } = params;
+    const { parent, dataKey, rowData, rowIndex } = params;
+    const rowHeight = this.myCache.rowHeight({index: rowIndex});
+    //console.log('getCompanyCellRenderer', rowHeight, rowData);
+    let data = [];
+    if (rowIndex % 5 === 0) {
+      data = ['This', 'is', 'a', 'long', 'company','name'];
+    } else {
+      data = [ rowData.company ];
+    }
+
+    return (
+      <CellMeasurer
+        cache={this.myCache}
+        columnIndex={1}
+        key={dataKey}
+        parent={parent}
+        rowIndex={rowIndex}
+      >
+        <div style={{ minHeight: rowHeight }}>
+          <div className={Styles.divCompany} style={{ minHeight: rowHeight-2 }}>
+          {
+            data.map((v,k) => (
+              <div key={k}>{v}</div>
+            ))
+          }
+          </div>
+        </div>
+      </CellMeasurer>
+    );
+  }
+
+  rowGetter = ({index}) => {
+    return this.getItem(this.state.sortedList, index);
+  }
+
+  getIndexCellData = ({rowData}) => {
+    //console.log('getIndexCellData-params:', rowData);
+    return rowData.index;
   }
 
   getItem(list, index) {
@@ -274,15 +280,15 @@ export default class MyFeatureTable extends React.PureComponent {
     const filterText = event.target.value;
     let filteredList = list.filter(item => this.containsSearchText(item, filterText));
     let sortedList = this.sortList({
-      filteredList, 
+      list: filteredList, 
       sortBy: this.state.sortBy, 
       sortDirection: this.state.sortDirection
     });
     this.setState({ filteredList, sortedList  });
   }
 
-  sortList = ({filteredList, sortBy, sortDirection}) => {
-    let newList = filteredList.sort((a, b) => {      
+  sortList = ({ list, sortBy, sortDirection}) => {
+    let newList = list.sort((a, b) => {      
       let dir = sortDirection === SortDirection.ASC ? 1 : -1;
       if (a[sortBy] > b[sortBy]) {
         return 1 * dir;

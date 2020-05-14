@@ -49,4 +49,6 @@
   color: green;
   font-size: 10px;
   border: 1px solid green;
+  border-radius: 5px;
+  min-height: inherit;
 }
